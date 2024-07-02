@@ -71,6 +71,7 @@ struct KV_alloc_pool *KV_alloc_pool_init(size_t size)
         return NULL;
     }
     pool->size += size;
+    num_pools += 1;
     alloc_pool[num_pools - 1] = pool;
     return (struct KV_alloc_pool *)pool;
 }
