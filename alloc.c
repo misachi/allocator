@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <assert.h>
 #include <errno.h>
 
 #include "alloc.h"
+#include "mmap.h"
 
 #define ALIGN_MASK(SZ) ((SZ) - (1UL))
 #define ALIGN_TO_SIZE(X, MASK) ((MASK + X) & ~MASK)
@@ -27,7 +27,7 @@ static void *KV_mmap_allocate(size_t size)
     void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     if (data == MAP_FAILED)
     {
-        fprintf(stderr, "mmap_allocate: unable to allocate size=%lu: %s\n", size, strerror(errno));
+        fprintf(stderr, "mmap_allocate: unable to allocate size=%u: %s\n", size, strerror(errno));
         return NULL;
     }
     return data;
@@ -50,14 +50,14 @@ struct KV_alloc_pool *KV_alloc_pool_init(size_t size)
 
     if ((num_pools + 1) > MAX_ALLOCATION_POOLS_NUM)
     {
-        fprintf(stderr, "KV_alloc_pool_init: exceeded memory size=%lu\n", size);
+        fprintf(stderr, "KV_alloc_pool_init: exceeded memory size=%u\n", size);
         return NULL;
     }
 
     pool = malloc(sizeof(struct KV_alloc_pool));
     if (pool == NULL)
     {
-        fprintf(stderr, "KV_alloc_pool_init: malloc: unable to allocate size=%lu: %s\n", size, strerror(errno));
+        fprintf(stderr, "KV_alloc_pool_init: malloc: unable to allocate size=%u: %s\n", size, strerror(errno));
         return NULL;
     }
 
@@ -67,7 +67,7 @@ struct KV_alloc_pool *KV_alloc_pool_init(size_t size)
     pool->data = KV_mmap_allocate(size);
     if (pool->data == NULL)
     {
-        fprintf(stderr, "KV_alloc_pool_init: mmap_allocate: unable to allocate size=%lu: %s\n", size, strerror(errno));
+        fprintf(stderr, "KV_alloc_pool_init: mmap_allocate: unable to allocate size=%u: %s\n", size, strerror(errno));
         return NULL;
     }
     pool->size += size;
@@ -187,7 +187,7 @@ void *KV_malloc(struct KV_alloc_pool *pool, size_t size)
     if ((size + pool->offset) >= pool->size)
     {
 #ifdef SIKV_VERBOSE
-        printf("memory limit of current pool exceeded for size=%lu\n", size);
+        printf("memory limit of current pool exceeded for size=%u\n", size);
 #endif
         return NULL;
     }
