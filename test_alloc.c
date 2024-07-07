@@ -24,14 +24,14 @@ void test_KV_malloc()
     struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
 
     size_t alloc_size = 32;
-    char *alloc = KV_malloc(pool, alloc_size);
+    char *alloc = (char*)KV_malloc(pool, alloc_size);
 
     assert(alloc != NULL);
     assert(pool->offset == (alloc_size + ALLOCATION_SIZE_OVERHEAD));
 
     assert(*(uint64_t *)(alloc - 8) == (alloc_size + ALLOCATION_SIZE_OVERHEAD));
 
-    char *alloc2 = KV_malloc(pool, alloc_size);
+    char *alloc2 = (char*)KV_malloc(pool, alloc_size);
     assert(alloc2 != NULL);
     assert(pool->offset == ((alloc_size + ALLOCATION_SIZE_OVERHEAD) * 2));
 
@@ -46,7 +46,7 @@ void test_KV_free()
     struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
 
     size_t alloc_size = 32;
-    char *alloc = KV_malloc(pool, alloc_size);
+    char *alloc = (char*)KV_malloc(pool, alloc_size);
 
     KV_free(pool, alloc);
     const char *item = get_freelist_item(1);
@@ -56,7 +56,7 @@ void test_KV_free()
     assert(*(char **)(item + 8) == NULL); // Previous chunk should be null; This is the head
     assert(*(char **)(item + 16) == NULL); // Next chunk should be null; We haven't free'd other similar sized chunks
 
-    char *alloc2 = KV_malloc(pool, alloc_size);  // We'll get allocation from freelist
+    char *alloc2 = (char*)KV_malloc(pool, alloc_size);  // We'll get allocation from freelist
 
     item = get_freelist_item(1);
     assert(item == NULL); // We got our allocation from the freelist; The class should be empty now
@@ -73,8 +73,8 @@ void test_KV_freelist_class_linked_list()
     struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
 
     size_t alloc_size = 40;
-    char *alloc = KV_malloc(pool, alloc_size);
-    char *alloc2 = KV_malloc(pool, alloc_size);
+    char *alloc = (char*)KV_malloc(pool, alloc_size);
+    char *alloc2 = (char*)KV_malloc(pool, alloc_size);
 
     // Garbage data we're going to test for later
     memset(alloc, -1, alloc_size);

@@ -1,6 +1,7 @@
 #ifndef _ALLOC_H
 #define _ALLOC_H
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -16,10 +17,10 @@
 
 struct KV_alloc_pool
 {
-    bool is_full; 
-    int offset;
+    // bool is_full;
     int size;
-    int pos;    // index to be used 
+    // int pos;    // index to be used
+    int offset;
     char *data; // Base address of memory
     // struct KV_alloc_pool *prev;
     // struct KV_alloc_pool *next;
@@ -27,7 +28,7 @@ struct KV_alloc_pool
 
 struct KV_alloc_freelist
 {
-    uint64_t size;
+    uint8_t lock[MAX_FREELIST_NUM_CLASSES];
     char *freelist[MAX_FREELIST_NUM_CLASSES];
 };
 
@@ -37,8 +38,9 @@ void *KV_malloc(struct KV_alloc_pool *pool, size_t size);
 void KV_free(struct KV_alloc_pool *pool, void *ptr);
 const char* get_freelist_item(int idx);
 
-// const struct KV_alloc_pool *get_pool() {
+void memory_barrier(void);
 
-// }
+void alloc_lock(struct KV_alloc_freelist* alloc, int n);
+void alloc_unlock(struct KV_alloc_freelist* alloc, int n);
 
 #endif // _ALLOC_H
