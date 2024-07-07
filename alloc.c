@@ -5,21 +5,44 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "alloc.h"
 #include "mmap.h"
+#include "alloc.h"
 
 #define ALIGN_MASK(SZ) ((SZ) - (1UL))
 #define ALIGN_TO_SIZE(X, MASK) ((MASK + X) & ~MASK)
 #define IS_ALIGNED(X, MASK) ((X % MASK) == 0)
 
-static struct KV_alloc_pool *alloc_pool[MAX_ALLOCATION_POOLS_NUM] = {NULL};
+static struct KV_alloc_pool *alloc_pool[MAX_ALLOCATION_POOLS_NUM];
 static int num_pools;
-// static struct KV_alloc_freelist *alloc_freelist = NULL;
-static char *freelist[MAX_FREELIST_NUM_CLASSES] = {NULL};
+static struct KV_alloc_freelist alloc_freelist;
+
+void memory_barrier(void)
+{
+    asm("" ::: "memory");
+}
+
+void alloc_lock(struct KV_alloc_freelist *alloc, int n)
+{
+    uint8_t expected = 0;
+    while (1)
+    {
+        if (__atomic_compare_exchange_n(&alloc->lock[n], &expected, (uint8_t)1, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
+        {
+            break;
+        }
+    }
+}
+
+void alloc_unlock(struct KV_alloc_freelist *alloc, int n)
+{
+    // This thread is the only one that has a lock on the object
+    assert(alloc->lock[n] == 1);
+    alloc->lock[n] = 0;
+}
 
 const char *get_freelist_item(int idx)
 {
-    return (const char *)freelist[idx];
+    return (const char *)alloc_freelist.freelist[idx];
 }
 
 static void *KV_mmap_allocate(size_t size)
