@@ -26,7 +26,7 @@ void alloc_lock(struct KV_alloc_freelist *alloc, int n)
     uint8_t expected = 0;
     while (1)
     {
-        if (__atomic_compare_exchange_n(&alloc->lock[n], &expected, (uint8_t)1, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
+        if (__atomic_compare_exchange_n(&alloc->lock[n], &expected, (uint8_t)1, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED))
         {
             break;
         }
