@@ -10,11 +10,15 @@
 
 #define ALIGN_MASK(SZ) ((SZ) - (1UL))
 #define ALIGN_TO_SIZE(X, MASK) ((MASK + X) & ~MASK)
-#define IS_ALIGNED(X, MASK) ((X % MASK) == 0)
+#define IS_ALIGNED(X, MASK) ((X & ALIGN_MASK(MASK)) == 0)
 
 static struct KV_alloc_pool *alloc_pool[MAX_ALLOCATION_POOLS_NUM];
 static int num_pools;
 static struct KV_alloc_freelist alloc_freelist;
+
+static int KV_get_freelist_alloc_class(size_t size);
+
+int (*get_alloc_class)(size_t size) = &KV_get_freelist_alloc_class;
 
 void memory_barrier(void)
 {
