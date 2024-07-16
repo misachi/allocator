@@ -101,6 +101,11 @@ struct KV_alloc_pool *KV_alloc_pool_init(size_t size)
     num_pools += 1;
     alloc_pool[num_pools - 1] = pool;
 
+    for (size_t i = 0; i < MAX_FREELIST_NUM_CLASSES; i++)
+    {
+        alloc_freelist.freelist[i] = NULL;
+    }
+
     return (struct KV_alloc_pool *)pool;
 }
 
@@ -119,11 +124,11 @@ void KV_alloc_pool_free(struct KV_alloc_pool *pool)
 static int KV_get_freelist_alloc_class(size_t size)
 {
     size = ALIGN_TO_SIZE(size, ALIGN_MASK(ALLOCATION_CLASSES_INCR_SIZE));
-    if (size <= MIN_ALLOCATION_CLASS_SIZE + (ALLOCATION_CLASSES_INCR_SIZE * MAX_FREELIST_NUM_CLASSES))
+    if (size < MIN_ALLOCATION_CLASS_SIZE + (ALLOCATION_CLASSES_INCR_SIZE * MAX_FREELIST_NUM_CLASSES))
     {
         return (size - MIN_ALLOCATION_CLASS_SIZE) / ALLOCATION_CLASSES_INCR_SIZE;
     }
-    return MAX_FREELIST_NUM_CLASSES - 1;
+    return -1;
 }
 
 static void *KV_remove_from_freelist_head(size_t size)
@@ -196,10 +201,32 @@ static void KV_add_to_freelist(char *alloc_start, size_t size)
 
 void *KV_malloc(struct KV_alloc_pool *pool, size_t size)
 {
-    size = ALIGN_TO_SIZE(size + ALLOCATION_SIZE_OVERHEAD, ALIGN_MASK(ALLOCATION_CLASSES_INCR_SIZE));
-    char *alloc = KV_remove_from_freelist_head(size);
+    char *alloc = NULL;
     int offset; // Local offset; We assume no share between concurrent threads
 
+    // size = ALIGN_TO_SIZE(size + ALLOCATION_SIZE_OVERHEAD, ALIGN_MASK(ALLOCATION_CLASSES_INCR_SIZE));
+    if (size <= (MIN_ALLOCATION_CLASS_SIZE - ALLOCATION_SIZE_OVERHEAD))
+    {
+        size = MIN_ALLOCATION_CLASS_SIZE;
+    }
+    else
+    {
+        size = ALIGN_TO_SIZE(size + ALLOCATION_SIZE_OVERHEAD, ALIGN_MASK(ALLOCATION_CLASSES_INCR_SIZE));
+    }
+
+    if (size > MIN_ALLOCATION_CLASS_SIZE + (ALLOCATION_CLASSES_INCR_SIZE * MAX_FREELIST_NUM_CLASSES))
+    {
+        alloc = KV_mmap_allocate(size);
+        if (alloc == NULL)
+        {
+            fprintf(stderr, "KV_malloc: mmap_allocate: unable to allocate size= %u: %s\n", (unsigned)size, strerror(errno));
+            return NULL;
+        }
+        *(uint64_t *)alloc = size;
+        return (void *)(alloc + ALLOCATION_SIZE_OVERHEAD);
+    }
+
+    alloc = KV_remove_from_freelist_head(size);
     if (alloc)
     {
         return (void *)(alloc + ALLOCATION_SIZE_OVERHEAD);
@@ -245,5 +272,13 @@ void KV_free(struct KV_alloc_pool *pool, void *ptr)
     // int alloc_class = KV_get_freelist_alloc_class(size);
     char *alloc_start = (char *)(ptr)-ALLOCATION_SIZE_OVERHEAD;
     uint64_t size = *(uint64_t *)alloc_start;
-    KV_add_to_freelist(alloc_start, size);
+
+    if (size > MIN_ALLOCATION_CLASS_SIZE + (ALLOCATION_CLASSES_INCR_SIZE * MAX_FREELIST_NUM_CLASSES))
+    {
+        KV_mmap_deallocate(alloc_start, size);
+    }
+    else
+    {
+        KV_add_to_freelist(alloc_start, size);
+    }
 }
