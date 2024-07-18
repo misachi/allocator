@@ -4,7 +4,7 @@
 
 #include "alloc.h"
 
-#define ALLOC_DEBUG_VERBOSE 1
+#define TEST_ALLOC_DEBUG_VERBOSE 0
 
 extern int (*get_alloc_class)(size_t size);
 
@@ -60,14 +60,13 @@ void test_KV_free()
     assert(*(char **)(item + 8) == NULL);  // Previous chunk should be null; This is the head
     assert(*(char **)(item + 16) == NULL); // Next chunk should be null; We haven't free'd other similar sized chunks
 
-    char *alloc2 = (char *)KV_malloc(pool, alloc_size); // We'll get allocation from freelist
+    alloc = (char *)KV_malloc(pool, alloc_size); // We'll get allocation from freelist
 
     item = get_freelist_item(1);
     assert(item == NULL); // We got our allocation from the freelist; The class should be empty now
 
-    KV_free(pool, alloc2);
+    KV_free(pool, alloc);
 
-    // assert(*(char **)(item + 8) != NULL); // Next chunk should be null; We haven't free'd other similar sized chunks
     KV_alloc_pool_free(pool);
 }
 
@@ -119,48 +118,105 @@ void test_alloc_class()
     } vals[] = {
         {16, 0},
         {24, 1},
-                {32, 2},
-                {40, 3},
-                {48, 4},
-                {56, 5},
-                {64, 6},
-                {72, 7},
-                {80, 8},
-                {88, 9},
-                {96, 10},
-                {104, 11},
-                {112, 12},
-                {120, 13},
-                {128, 14},
-                {136, 15},
-                {144, 16},
-                {152, 17},
-                {160, 18},
-                {168, 19},
-                {176, 20},
-                {184, 21},
-                {192, 22},
-                {200, 23},
-                {208, 24},
-                {216, 25},
-                {224, 26},
-                {232, 27},
-                {240, 28},
-                {248, 29},
-                {256, 30},
-                {264, 31},
-                {272, -1},
-                {280, -1}}; // Out of bound for 32 allocation classes; Would be allocated using mmap
+        {32, 2},
+        {40, 3},
+        {48, 4},
+        {56, 5},
+        {64, 6},
+        {72, 7},
+        {80, 8},
+        {88, 9},
+        {96, 10},
+        {104, 11},
+        {112, 12},
+        {120, 13},
+        {128, 14},
+        {136, 15},
+        {144, 16},
+        {152, 17},
+        {160, 18},
+        {168, 19},
+        {176, 20},
+        {184, 21},
+        {192, 22},
+        {200, 23},
+        {208, 24},
+        {216, 25},
+        {224, 26},
+        {232, 27},
+        {240, 28},
+        {248, 29},
+        {256, 30},
+        {264, 31},
+        {272, -1},
+        {280, -1}}; // Out of bound for 32 allocation classes; Would be allocated using mmap
 
     for (size_t i = 0; i < (sizeof(vals) / sizeof(struct V)); i++)
     {
         int alloc_class = get_alloc_class(vals[i].size);
-#if ALLOC_DEBUG_VERBOSE
+#if TEST_ALLOC_DEBUG_VERBOSE
         printf("Checking size=%i for allocation class=%i\n", vals[i].size, vals[i].alloc_class);
 #endif
         assert(alloc_class == vals[i].alloc_class);
         assert(get_freelist_item(vals[i].alloc_class) == NULL);
     }
+    KV_alloc_pool_free(pool);
+}
+
+void test_min_ensure_pointer_links_allocd()
+{
+    int alloc_num = 10;
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    size_t alloc_size = 8;
+    char *alloc[alloc_num];
+
+    for (size_t i = 0; i < alloc_num; i++)
+    {
+        alloc[i] = (char *)KV_malloc(pool, alloc_size);
+    }
+
+    for (size_t i = 0; i < alloc_num; i++)
+    {
+        KV_free(pool, alloc[i]);
+    }
+
+    const char *item = get_freelist_item(0);
+
+    for (size_t i = 0; i < (alloc_num - 1); i++)
+    {
+#if TEST_ALLOC_DEBUG_VERBOSE
+        printf("Checking allocation index=%zu\n", i);
+#endif
+        assert(*(char **)(item + 8) != NULL); // Next chunk in freelist should not be null as we free'd <alloc_num> chunks of the same class
+        item = *(char **)(item + 8);
+    }
+
+#if TEST_ALLOC_DEBUG_VERBOSE
+    printf("Last allocation index=%zu\n", i);
+#endif
+    assert(*(char **)(item + 8) == NULL); // Next chunk should be null since this is the last chunk
+    KV_alloc_pool_free(pool);
+}
+
+void test_multiple_pool_allocs_stats() {
+    int alloc_num = 10;
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    size_t alloc_size = 8;
+    char *alloc[alloc_num];
+
+    for (size_t i = 0; i < alloc_num; i++)
+    {
+        alloc[i] = (char *)KV_malloc(pool, alloc_size);
+    }
+
+    for (size_t i = 0; i < alloc_num; i++)
+    {
+        KV_free(pool, alloc[i]);
+    }
+
+    KV_alloc_pool_free(pool);
+
+    pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
     KV_alloc_pool_free(pool);
 }
 
@@ -171,5 +227,7 @@ int main(int argc, char *argv[])
     test_KV_free();
     test_KV_freelist_class_linked_list();
     test_alloc_class();
+    test_min_ensure_pointer_links_allocd();
+    test_multiple_pool_allocs_stats();
     return 0;
 }

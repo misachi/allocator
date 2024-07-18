@@ -15,6 +15,9 @@
 #define MIN_ALLOCATION_CLASS_SIZE (int)16
 #define ALLOCATION_SIZE_OVERHEAD (uint64_t)8
 
+#define ALLOC_DEBUG_VERBOSE 0
+#define ALLOC_DEBUG_STATS 0
+
 struct KV_alloc_pool
 {
     // bool is_full;
@@ -22,9 +25,27 @@ struct KV_alloc_pool
     // int pos;    // index to be used
     int offset;
     char *data; // Base address of memory
+    struct alloc_stats *stats;
     // struct KV_alloc_pool *prev;
     // struct KV_alloc_pool *next;
 };
+
+// #if ALLOC_DEBUG_STATS
+struct alloc_stats
+{
+    int32_t fr_hits; // freelist only allocations
+    int32_t fr_misses;
+    int32_t num_allocs; // all allocations from global pool
+    int32_t num_large_allocs; // large allocations from mmap
+    int32_t num_allocs_in_use; // active allocs
+    int8_t lock;
+    uint64_t fr_alloc_size; // total bytes in freelist
+    uint64_t alloc_size; // total allocated bytes from global pool
+    uint64_t allocs_in_use_size;
+    uint64_t large_allocs_size;
+};
+// #endif
+
 
 struct KV_alloc_freelist
 {
