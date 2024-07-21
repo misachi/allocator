@@ -11,7 +11,7 @@ extern int (*get_alloc_class)(size_t size);
 void test_KV_alloc_pool_init()
 {
     size_t size = MIN_ALLOCATION_POOL_SIZE;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(size, false);
 
     memset(pool->data, -1, size);
 
@@ -25,7 +25,7 @@ void test_KV_alloc_pool_init()
 void test_KV_malloc()
 {
     size_t size = MIN_ALLOCATION_POOL_SIZE;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(size, false);
 
     size_t alloc_size = 32;
     char *alloc = (char *)KV_malloc(pool, alloc_size);
@@ -47,13 +47,13 @@ void test_KV_malloc()
 void test_KV_free()
 {
     size_t size = MIN_ALLOCATION_POOL_SIZE;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(size, false);
 
     size_t alloc_size = 16;
     char *alloc = (char *)KV_malloc(pool, alloc_size);
 
     KV_free(pool, alloc);
-    const char *item = get_freelist_item(1);
+    const char *item = get_freelist_item(pool, 1);
 
     assert(item != NULL);                  // Check if chunk is placed in the right position in freelist
     assert(*(uint64_t *)item == 24);       // Check size
@@ -62,7 +62,7 @@ void test_KV_free()
 
     alloc = (char *)KV_malloc(pool, alloc_size); // We'll get allocation from freelist
 
-    item = get_freelist_item(1);
+    item = get_freelist_item(pool, 1);
     assert(item == NULL); // We got our allocation from the freelist; The class should be empty now
 
     KV_free(pool, alloc);
@@ -73,7 +73,7 @@ void test_KV_free()
 void test_KV_freelist_class_linked_list()
 {
     size_t size = MIN_ALLOCATION_POOL_SIZE;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(size);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(size, false);
 
     size_t alloc_size = 40;
     char *alloc = (char *)KV_malloc(pool, alloc_size);
@@ -86,7 +86,7 @@ void test_KV_freelist_class_linked_list()
     KV_free(pool, alloc);
     KV_free(pool, alloc2);
 
-    const char *item = get_freelist_item(4);
+    const char *item = get_freelist_item(pool, 4);
     assert(item != NULL);
 
     assert(*(uint64_t *)item == 48);       // Check size
@@ -110,7 +110,7 @@ void test_KV_freelist_class_linked_list()
 
 void test_alloc_class()
 {
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE, false);
     // int i = 1;
     struct V
     {
@@ -158,7 +158,7 @@ void test_alloc_class()
         printf("Checking size=%i for allocation class=%i\n", vals[i].size, vals[i].alloc_class);
 #endif
         assert(alloc_class == vals[i].alloc_class);
-        assert(get_freelist_item(vals[i].alloc_class) == NULL);
+        assert(get_freelist_item(pool, vals[i].alloc_class) == NULL);
     }
     KV_alloc_pool_free(pool);
 }
@@ -166,7 +166,7 @@ void test_alloc_class()
 void test_min_ensure_pointer_links_allocd()
 {
     int alloc_num = 10;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE, false);
     size_t alloc_size = 8;
     char *alloc[alloc_num];
 
@@ -180,7 +180,7 @@ void test_min_ensure_pointer_links_allocd()
         KV_free(pool, alloc[i]);
     }
 
-    const char *item = get_freelist_item(0);
+    const char *item = get_freelist_item(pool, 0);
 
     for (size_t i = 0; i < (alloc_num - 1); i++)
     {
@@ -200,7 +200,7 @@ void test_min_ensure_pointer_links_allocd()
 
 void test_multiple_pool_allocs_stats() {
     int alloc_num = 10;
-    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    struct KV_alloc_pool *pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE, false);
     size_t alloc_size = 8;
     char *alloc[alloc_num];
 
@@ -216,7 +216,7 @@ void test_multiple_pool_allocs_stats() {
 
     KV_alloc_pool_free(pool);
 
-    pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE);
+    pool = KV_alloc_pool_init(MIN_ALLOCATION_POOL_SIZE, false);
     KV_alloc_pool_free(pool);
 }
 

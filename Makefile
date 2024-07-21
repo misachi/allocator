@@ -2,12 +2,12 @@ CC := gcc
 PREFIX := /usr/local
 INCLUDEDIR := $(PREFIX)/include
 LINK_TYPE := -shared
-BUILD_ARGS := -O2 \
-	-Werror -Wall -pedantic
+BUILD_ARGS := -O3 \
+	-Werror -Wall -pedantic -pthread
 DEBUG_BUILD := -g \
-	-Werror -Wall -pedantic
+	-Werror -Wall -pedantic -pthread
 TEST_BUILD_ARGS := -ggdb \
-	-Werror -Wall
+	-Werror -Wall -fstrict-aliasing -Wstrict-aliasing -fsanitize=thread -fno-sanitize-recover=all -pthread
 LIBDIR := $(PREFIX)/lib
 
 
@@ -15,6 +15,7 @@ ifeq ($(OS),Windows_NT)
 TEST_OUT := test
 else
 DESTDIR := `pwd`
+BENCH_OUT := bench.out
 TEST_OUT := test.out
 BUILD_ARGS += -fPIC
 DEBUG_BUILD += -fsanitize=address -fPIC
@@ -39,11 +40,18 @@ debug: alloc.o mmap.o
 
 ifneq ($(OS),Windows_NT)
 test1:
-	$(CC) $(TEST_BUILD_ARGS) -fsanitize=address test_alloc.c alloc.c mmap.c -o $(TEST_OUT)
+	$(CC) $(TEST_BUILD_ARGS) test_alloc.c alloc.c mmap.c -o $(TEST_OUT)
 	@mkdir -p $(DESTDIR)/build/bin
 	@cp $(TEST_OUT) $(DESTDIR)/build/bin
 	@$(DESTDIR)/build/bin/$(TEST_OUT)
 	@rm $(TEST_OUT)
+
+bench:
+	$(CC) -g -p -O3 -Wall -Werror -Wextra -pthread bench_alloc.c alloc.c mmap.c -o $(BENCH_OUT)
+	@mkdir -p $(DESTDIR)/build/bin
+	@cp $(BENCH_OUT) $(DESTDIR)/build/bin
+	@$(DESTDIR)/build/bin/$(BENCH_OUT)
+	@rm $(BENCH_OUT)
 else
 test1:
 	$(CC) $(TEST_BUILD_ARGS) test_alloc.c alloc.c mmap.c -o $(TEST_OUT)
