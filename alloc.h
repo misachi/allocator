@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <threads.h>
+
+#include "threading.h"
 
 #define MAX_FREELIST_NUM_CLASSES (int)32
 #define MAX_ALLOCATION_POOL_SIZE (1UL) << (64)

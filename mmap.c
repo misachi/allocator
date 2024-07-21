@@ -1,10 +1,12 @@
 #include "mmap.h"
 
 #if defined(_WIN32)
+
+#define ALLOC_UNUSED __attribute__((unused))
 // This is not a complete implementation equivalent for mmap on linux
 // It only works for shared anonymously mapped memory. If something beyond this is required, I'm sure
 // there are other better libraries that can be used
-void *mmap(void *addr, size_t len, int prot, int flags, int fd, win_off_t off)
+void *mmap(void *addr ALLOC_UNUSED, size_t len, int prot, int flags, int fd, win_off_t off)
 {
     HANDLE hMapFile, hValue;
     PVOID mmap;
@@ -34,7 +36,7 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, win_off_t off)
     return mmap;
 }
 
-int munmap(void *addr, size_t len)
+int munmap(void *addr, size_t len ALLOC_UNUSED)
 {
     BOOL ret = UnmapViewOfFile((LPCVOID)addr);
     if (ret == 0)

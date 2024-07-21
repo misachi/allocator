@@ -305,7 +305,7 @@ static ALLOC_UNUSED void KV_add_to_freelist(struct KV_alloc_pool *pool, char *al
 void *KV_malloc(struct KV_alloc_pool *pool, size_t size)
 {
     char *alloc = NULL;
-    int64_t offset; // Local offset; We assume no share between concurrent threads
+    uint64_t offset; // Local offset; We assume no share between concurrent threads
 
     if (size <= (MIN_ALLOCATION_CLASS_SIZE - ALLOCATION_SIZE_OVERHEAD))
     {

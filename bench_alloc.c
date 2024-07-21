@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <threads.h>
 #include <assert.h>
 #include <time.h>
 
@@ -32,13 +31,6 @@ static __attribute__((noinline)) int pool_alloc_free(void *arg)
     }
     return EXIT_SUCCESS;
 }
-
-struct alloc_block
-{
-    mtx_t lock;
-    uint64_t size;
-    struct KV_alloc_pool *pool;
-};
 
 static __attribute__((noinline)) int pool_alloc_free_rand_size(void *arg)
 {
@@ -75,6 +67,7 @@ static __attribute__((noinline)) int pool_malloc_free_rand_size(void *arg ALLOC_
     return EXIT_SUCCESS;
 }
 
+// #if defined(__linux__)
 void bench_pool_allocs_same_alloc_size_single_thread()
 {
     clock_t start, end;
@@ -156,11 +149,12 @@ void bench_pool_allocs_multiple_threads_local_pool()
     clock_t start, end;
     double cpu_time_used;
     // int num_threads = 3;
+    size_t size = 2224154624/num_threads;
     struct KV_alloc_pool *pools[num_threads];
 
     for (size_t i = 0; i < num_threads; i++)
     {
-        pools[i] = KV_alloc_pool_init(alloc_num, false);
+        pools[i] = KV_alloc_pool_init(size, false);
     }
 
     thrd_t threads[num_threads];
@@ -248,9 +242,11 @@ void bench_malloc_random_size_multiple_threads()
 
     printf("%s => %f seconds %f MB/s\n", __FUNCTION__, cpu_time_used, (((alloc_num * alloc_size * num_threads) / (1024 * 1024)) / cpu_time_used));
 }
+// #endif
 
 int main(int argc ALLOC_UNUSED, char *argv[] ALLOC_UNUSED)
 {
+// #if defined(__linux__)
 #if CONCURRENT_ACCESS
     init_sizes();
     printf("==============================MULTITHREADED==================================\n");
@@ -265,10 +261,12 @@ int main(int argc ALLOC_UNUSED, char *argv[] ALLOC_UNUSED)
     printf("=============================================================================\n\n");
 #else
     printf("==============================SINGLETHREADED=================================\n");
+    bench_malloc_same_alloc_size_single_thread();
     bench_pool_allocs_same_alloc_size_single_thread();
     bench_malloc_same_alloc_size_single_thread();
-    bench_pool_allocs_random_size_multiple_threads_own_pool();
+    bench_pool_allocs_multiple_threads_local_pool();
     printf("=============================================================================\n\n");
-#endif
+#endif // CONCURRENT_ACCESS
+// #endif
     return EXIT_SUCCESS;
 }
