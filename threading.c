@@ -52,6 +52,7 @@ int thrd_join(thrd_t thr, int *res ALLOC_UNUSED) {
     switch (dwWaitResult)
     {
     case WAIT_OBJECT_0:
+        CloseHandle(thr);
         return thrd_success;
     case WAIT_ABANDONED:
     default:

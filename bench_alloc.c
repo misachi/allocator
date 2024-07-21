@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <time.h>
 
+#include "threading.h"
 #include "alloc.h"
 
 const int64_t alloc_num = 100000000;
@@ -261,7 +262,6 @@ int main(int argc ALLOC_UNUSED, char *argv[] ALLOC_UNUSED)
     printf("=============================================================================\n\n");
 #else
     printf("==============================SINGLETHREADED=================================\n");
-    bench_malloc_same_alloc_size_single_thread();
     bench_pool_allocs_same_alloc_size_single_thread();
     bench_malloc_same_alloc_size_single_thread();
     bench_pool_allocs_multiple_threads_local_pool();
