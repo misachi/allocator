@@ -80,11 +80,14 @@ install: alloc.so
 	@cp $(DESTDIR)/build/alloc.so $(LIBDIR)/liballoc.so
 	@chmod 755 $(LIBDIR)/liballoc.so
 	@cp alloc.h $(INCLUDEDIR)/alloc.h
+	@cp threading.h $(INCLUDEDIR)/threading.h
 	@chmod 644 $(INCLUDEDIR)/alloc.h
+	@chmod 644 $(INCLUDEDIR)/threading.h
 
 uninstall:
 	@rm -f $(LIBDIR)/liballoc.so
 	@rm -f $(INCLUDEDIR)/alloc.h
+	@rm -f $(INCLUDEDIR)/threading.h
 
 endif
 
